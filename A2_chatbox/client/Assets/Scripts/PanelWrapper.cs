@@ -28,8 +28,10 @@ public class PanelWrapper : MonoBehaviour
     {
         //setup chat input listener to trigger on enter
         _inputFieldChat.onEndEdit.AddListener(
-            (value) => {
-                if (Input.GetKeyDown(KeyCode.Return)) OnChatTextEntered(value);
+            (value) =>
+            {
+                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                    OnChatTextEntered(value);
             }
          );
     }

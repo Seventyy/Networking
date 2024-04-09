@@ -4,47 +4,56 @@ using System.Net;
 using System.Collections.Generic;
 using shared;
 using System.Threading;
+using System.Text;
+using System.Linq;
 
 class TCPServerSample
 {
-	/**
-	 * This class implements a simple concurrent TCP Echo server.
-	 * Read carefully through the comments below.
-	 */
-	public static void Main (string[] args)
-	{
-		Console.WriteLine("Server started on port 55555");
+    public static void Main(string[] args)
+    {
+        Console.WriteLine("Server started on port 55555");
 
-		TcpListener listener = new TcpListener (IPAddress.Any, 55555);
-		listener.Start ();
+        TcpListener listener = new TcpListener(IPAddress.Any, 55555);
+        listener.Start();
 
-		List<TcpClient> clients = new List<TcpClient>();
+        Dictionary<TcpClient, string> clients = new Dictionary<TcpClient, string>();
 
-		while (true)
-		{
-			//First big change with respect to example 001
-			//We no longer block waiting for a client to connect, but we only block if we know
-			//a client is actually waiting (in other words, we will not block)
-			//In order to serve multiple clients, we add that client to a list
-			while (listener.Pending()) { 
-				clients.Add(listener.AcceptTcpClient());
-				Console.WriteLine("Accepted new client.");
-			}
+        while (true)
+        {
+            while (listener.Pending())
+            {
+                clients.Add(listener.AcceptTcpClient(), "Guest" + (clients.Count + 1).ToString());
+                foreach (TcpClient receiver in clients.Keys)
+                {
+                    string dataString;
 
-			//Second big change, instead of blocking on one client, 
-			//we now process all clients IF they have data available
-			foreach (TcpClient client in clients)
-			{
-				if (client.Available == 0) continue;
-				NetworkStream stream = client.GetStream();
-				StreamUtil.Write(stream, StreamUtil.Read(stream));
-			}
+                    if (receiver == clients.Last().Key)
+                        dataString = "You joined the server as: " + clients.Last().Value + ".";
+                    else
+                        dataString = clients.Last().Value + " joined the server.";
 
-			//Although technically not required, now that we are no longer blocking, 
-			//it is good to cut your CPU some slack
-			Thread.Sleep(100);
-		}
-	}
+                    StreamUtil.Write(receiver.GetStream(), Encoding.UTF8.GetBytes(dataString));
+                }
+            }
+
+            foreach (TcpClient sender in clients.Keys)
+            {
+                if (sender.Available == 0) continue;
+
+                byte[] data = StreamUtil.Read(sender.GetStream());
+                string dataString = clients[sender] + ": " + Encoding.UTF8.GetString(data);
+
+                foreach (TcpClient receiver in clients.Keys)
+                {
+                    StreamUtil.Write(receiver.GetStream(), Encoding.UTF8.GetBytes(dataString));
+                }
+            }
+
+            Thread.Sleep(100);
+        }
+    }
+
+    
 }
 
 

@@ -50,10 +50,6 @@ public class TCPChatClient : MonoBehaviour
 			//echo client - send one, expect one (hint: that is not how a chat works ...)
 			byte[] outBytes = Encoding.UTF8.GetBytes(pInput);
 			StreamUtil.Write(_client.GetStream(), outBytes);
-
-			byte[] inBytes = StreamUtil.Read(_client.GetStream());
-            string inString = Encoding.UTF8.GetString(inBytes);
-            _panelWrapper.AddOutput(inString);
 		} 
         catch (Exception e) 
         {
@@ -62,6 +58,27 @@ public class TCPChatClient : MonoBehaviour
 			_client.Close();
 			connectToServer();
 		}
+    }
+
+    private void Update()
+    {
+        // Check if the client has received any messages
+        if (_client.Available > 0)
+        {
+            try
+            {
+                byte[] inBytes = StreamUtil.Read(_client.GetStream());
+                string inString = Encoding.UTF8.GetString(inBytes);
+                _panelWrapper.AddOutput(inString);
+            }
+            catch (Exception e)
+            {
+                _panelWrapper.AddOutput(e.Message);
+                _client.Close();
+                connectToServer();
+            }
+        }
+        
     }
 
 }
