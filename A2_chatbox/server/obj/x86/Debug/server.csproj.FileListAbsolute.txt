@@ -1,7 +1,0 @@
-C:\Users\Seventy\Documents\CMGT\Networking\A2_chatbox\server\bin\Debug\server.exe.config
-C:\Users\Seventy\Documents\CMGT\Networking\A2_chatbox\server\bin\Debug\server.exe
-C:\Users\Seventy\Documents\CMGT\Networking\A2_chatbox\server\bin\Debug\server.pdb
-C:\Users\Seventy\Documents\CMGT\Networking\A2_chatbox\server\obj\x86\Debug\server.csproj.AssemblyReference.cache
-C:\Users\Seventy\Documents\CMGT\Networking\A2_chatbox\server\obj\x86\Debug\server.csproj.CoreCompileInputs.cache
-C:\Users\Seventy\Documents\CMGT\Networking\A2_chatbox\server\obj\x86\Debug\server.exe
-C:\Users\Seventy\Documents\CMGT\Networking\A2_chatbox\server\obj\x86\Debug\server.pdb
