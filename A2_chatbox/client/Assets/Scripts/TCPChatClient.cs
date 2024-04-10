@@ -69,7 +69,8 @@ public class TCPChatClient : MonoBehaviour
             {
                 byte[] inBytes = StreamUtil.Read(_client.GetStream());
                 string inString = Encoding.UTF8.GetString(inBytes);
-                _panelWrapper.AddOutput(inString);
+                // if message is empty dont print it
+                if (inString.Length > 0) _panelWrapper.AddOutput(inString);
             }
             catch (Exception e)
             {

@@ -49,11 +49,31 @@ class TCPServerSample
                 }
             }
 
+            List<TcpClient> disconnectedClients = new List<TcpClient>();
+            foreach (TcpClient client in clients.Keys)
+            {
+                try
+                {
+                    StreamUtil.Write(client.GetStream(), new byte[0]);
+                }
+                catch
+                {
+                    disconnectedClients.Add(client);
+                }
+            }
+            foreach (TcpClient client in disconnectedClients)
+            {
+                clients.Remove(client);
+                if (clients.Count == 0)
+                    clients = new Dictionary<TcpClient, string>();
+            }
+
+
             Thread.Sleep(100);
         }
     }
 
-    
+
 }
 
 
