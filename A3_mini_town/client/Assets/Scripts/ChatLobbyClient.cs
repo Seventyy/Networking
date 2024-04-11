@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
+using UnityEditor.PackageManager;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 /**
@@ -58,17 +60,19 @@ public class ChatLobbyClient : MonoBehaviour
     private void onChatTextEntered(string pText)
     {
         _panelWrapper.ClearInput();
-        sendString(pText);
+        sendMessage(pText);
     }
 
-    private void sendString(string pOutString)
+    private void sendMessage(string message)
     {
         try
         {
-            //we are still communicating with strings at this point, this has to be replaced with either packet or object communication
-            Debug.Log("Sending:" + pOutString);
-            byte[] outBytes = Encoding.UTF8.GetBytes(pOutString);
-            StreamUtil.Write(_client.GetStream(), outBytes);
+            Debug.Log("Sending:" + message);
+
+            Packet outPacket = new Packet();
+            outPacket.Write("send_message");
+            outPacket.Write(message);
+            sendPacket(outPacket);
         }
         catch (Exception e)
         {
@@ -87,11 +91,49 @@ public class ChatLobbyClient : MonoBehaviour
         {
             if (_client.Available > 0)
             {
-                //we are still communicating with strings at this point, this has to be replaced with either packet or object communication
+                //get a packet
                 byte[] inBytes = StreamUtil.Read(_client.GetStream());
-                string inString = Encoding.UTF8.GetString(inBytes);
-                Debug.Log("Received:" + inString);
-                showMessage(inString);
+                if (inBytes.Length > 0)
+                {
+                    Packet inPacket = new Packet(inBytes);
+
+                    //get the command
+                    string command = inPacket.ReadString();
+                    Debug.Log("Received command:" + command);
+
+                    //process it
+                    if (command == "get_message")
+                    {
+                        showMessage(inPacket.ReadInt(), inPacket.ReadString());
+                    }
+                    else if (command == "spawn_new")
+                    {
+                        AvatarView avatarView = _avatarAreaManager.AddAvatarView(inPacket.ReadInt());
+                        avatarView.SetSkin(inPacket.ReadInt());
+                        avatarView.transform.localPosition = new Vector3(
+                            (float)inPacket.ReadDouble(),
+                            (float)inPacket.ReadDouble(),
+                            (float)inPacket.ReadDouble()
+                        );
+                    }
+                    else if (command == "spawn_exising")
+                    {
+                        int count = inPacket.ReadInt();
+
+                        for (int i = 0; i < count; i++)
+                        {
+                            AvatarView avatarView = _avatarAreaManager.AddAvatarView(inPacket.ReadInt());
+                            avatarView.SetSkin(inPacket.ReadInt());
+                            avatarView.transform.localPosition = new Vector3(
+                                (float)inPacket.ReadDouble(),
+                                (float)inPacket.ReadDouble(),
+                                (float)inPacket.ReadDouble()
+                            );
+                        }
+
+
+                    }
+                }
             }
         }
         catch (Exception e)
@@ -103,22 +145,25 @@ public class ChatLobbyClient : MonoBehaviour
         }
     }
 
-    private void showMessage(string pText)
+    private void showMessage(int id, string message)
     {
-        //This is a stub for what should actually happen
-        //What should actually happen is use an ID that you got from the server, to get the correct avatar
-        //and show the text message through that
-        List<int> allAvatarIds = _avatarAreaManager.GetAllAvatarIds();
-        
-        if (allAvatarIds.Count == 0)
-        {
-            Debug.Log("No avatars available to show text through:" + pText);
-            return;
-        }
-
-        int randomAvatarId = allAvatarIds[UnityEngine.Random.Range(0, allAvatarIds.Count)];
-        AvatarView avatarView = _avatarAreaManager.GetAvatarView(randomAvatarId);
-        avatarView.Say(pText);
+        AvatarView avatarView = _avatarAreaManager.GetAvatarView(id);
+        avatarView.Say(message);
     }
 
+    private void sendPacket(Packet pOutPacket)
+    {
+        try
+        {
+            StreamUtil.Write(_client.GetStream(), pOutPacket.GetBytes());
+        }
+
+        catch (Exception e)
+        {
+            //for quicker testing, we reconnect if something goes wrong.
+            Debug.Log(e.Message);
+            _client.Close();
+            connectToServer();
+        }
+    }
 }
