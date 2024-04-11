@@ -157,6 +157,15 @@ class TCPServerSample
         }
         foreach (TcpClient client in disconnectedClients)
         {
+            foreach (TcpClient otherClient in _clients.Keys)
+            {
+                if (otherClient == client) continue;
+                Packet outPacket = new Packet();
+                outPacket.Write("destroy_avatar");
+                outPacket.Write(_clients[client].id);
+                StreamUtil.Write(otherClient.GetStream(), outPacket.GetBytes());
+            }
+
             _clients.Remove(client);
             Console.WriteLine("Removed client.");
         }
