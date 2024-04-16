@@ -54,75 +54,101 @@ class TCPServerSample
             processDisconectedClients();
 
 
-            Thread.Sleep(1000);
+            Thread.Sleep(100);
         }
     }
 
     private void processNewClients()
     {
-        while (_listener.Pending())
+        try
         {
-            Avatar avatar = new Avatar(_nextAvatarId++, new Random().Next(0, 100), GetRandomPosition());
-            TcpClient this_client = _listener.AcceptTcpClient();
-            _clients.Add(this_client, avatar);
+            while (_listener.Pending())
+            {
+                try
+                {
+                    Avatar avatar = new Avatar(_nextAvatarId++, new Random().Next(0, 100), GetRandomPosition());
+                    TcpClient this_client = _listener.AcceptTcpClient();
+                    _clients.Add(this_client, avatar);
 
-            sendNewPlayerToExistingClients(avatar, this_client);
-            sendExisingPlayersToNewClient(this_client);
 
-            Console.WriteLine("Accepted new client.");
+                    Console.WriteLine("Accepted new client.");
+                }
+                catch
+                {
+                    Console.WriteLine("Client cannot connect.");
+                }
+            }
+        }
+        catch
+        {
+            Console.WriteLine("_listener.Pending() failed.");
         }
     }
 
-    private void sendExisingPlayersToNewClient(TcpClient pClient)
-    {
-        Packet outPacket = new Packet();
-        outPacket.Write("spawn_exising");
-        outPacket.Write(_clients.Count);
-        foreach (Avatar avatar in _clients.Values)
-        {
-            outPacket.Write(avatar.id);
-            outPacket.Write(avatar.skin_id);
-            outPacket.Write(avatar.position.Item1);
-            outPacket.Write(avatar.position.Item2);
-            outPacket.Write(avatar.position.Item3);
-        }
-        StreamUtil.Write(pClient.GetStream(), outPacket.GetBytes());
-    }
-
-    private void sendNewPlayerToExistingClients(Avatar pAvatar, TcpClient pClient)
+    private void sendNewPlayerToExistingClients()
     {
         foreach (TcpClient client in _clients.Keys)
         {
-            if (client == pClient) continue;
-            Packet outPacket = new Packet();
-            outPacket.Write("spawn_new");
-            outPacket.Write(pAvatar.id);
-            outPacket.Write(pAvatar.skin_id);
-            outPacket.Write(pAvatar.position.Item1);
-            outPacket.Write(pAvatar.position.Item2);
-            outPacket.Write(pAvatar.position.Item3);
-            StreamUtil.Write(client.GetStream(), outPacket.GetBytes());
+            foreach (TcpClient otherClient in _clients.Keys)
+            {
+                if (otherClient == client) continue;
+
+                Packet outPacket = new Packet();
+                outPacket.Write("create_avatar");
+                outPacket.Write(_clients[otherClient].id);
+                outPacket.Write(_clients[otherClient].skin_id);
+                outPacket.Write(_clients[otherClient].position.Item1);
+                outPacket.Write(_clients[otherClient].position.Item2);
+                outPacket.Write(_clients[otherClient].position.Item3);
+                StreamUtil.Write(client.GetStream(), outPacket.GetBytes());
+            }
         }
     }
+
+    private void sendExistingPlayersToNewClient(TcpClient pClient)
+    {
+        foreach (TcpClient otherClient in _clients.Keys)
+        {
+            Packet outPacket = new Packet();
+            outPacket.Write("create_avatar");
+            outPacket.Write(_clients[otherClient].id);
+            outPacket.Write(_clients[otherClient].skin_id);
+            outPacket.Write(_clients[otherClient].position.Item1);
+            outPacket.Write(_clients[otherClient].position.Item2);
+            outPacket.Write(_clients[otherClient].position.Item3);
+            StreamUtil.Write(pClient.GetStream(), outPacket.GetBytes());
+        }
+    }
+
+    
 
     private void processExistingClients()
     {
         foreach (TcpClient client in _clients.Keys)
         {
-            if (client.Available == 0) continue;
-
-            //get a packet
-            byte[] inBytes = StreamUtil.Read(client.GetStream());
-            Packet inPacket = new Packet(inBytes);
-
-            //get the command
-            string command = inPacket.ReadString();
-            Console.WriteLine("Received command:" + command);
-
-            //process it
-            if (command == "send_message")
+            try
             {
-                handleSendMessage(client, inPacket);
+                if (client.Available == 0) continue;
+
+                //get a packet
+                byte[] inBytes = StreamUtil.Read(client.GetStream());
+                Packet inPacket = new Packet(inBytes);
+
+                //get the command
+                string command = inPacket.ReadString();
+                Console.WriteLine("Received command:" + command);
+
+                //process it
+                if (command == "send_message")
+                {
+                    handleSendMessage(client, inPacket);
+                }
+
+            }
+            catch
+            {
+                Console.WriteLine("process Client failed");
+
             }
         }
     }
@@ -143,31 +169,39 @@ class TCPServerSample
 
     private void processDisconectedClients()
     {
-        List<TcpClient> disconnectedClients = new List<TcpClient>();
-        foreach (TcpClient client in _clients.Keys)
+        try
         {
-            try
+            List<TcpClient> disconnectedClients = new List<TcpClient>();
+            foreach (TcpClient client in _clients.Keys)
             {
-                StreamUtil.Write(client.GetStream(), new byte[0]);
+                try
+                {
+                    StreamUtil.Write(client.GetStream(), new byte[0]);
+                }
+                catch
+                {
+                    disconnectedClients.Add(client);
+                }
             }
-            catch
+            foreach (TcpClient client in disconnectedClients)
             {
-                disconnectedClients.Add(client);
+                foreach (TcpClient otherClient in _clients.Keys)
+                {
+                    if (otherClient == client) continue;
+                    Packet outPacket = new Packet();
+                    outPacket.Write("destroy_avatar");
+                    outPacket.Write(_clients[client].id);
+                    StreamUtil.Write(otherClient.GetStream(), outPacket.GetBytes());
+                }
+
+                _clients.Remove(client);
+                Console.WriteLine("Removed client.");
             }
         }
-        foreach (TcpClient client in disconnectedClients)
+        catch
         {
-            foreach (TcpClient otherClient in _clients.Keys)
-            {
-                if (otherClient == client) continue;
-                Packet outPacket = new Packet();
-                outPacket.Write("destroy_avatar");
-                outPacket.Write(_clients[client].id);
-                StreamUtil.Write(otherClient.GetStream(), outPacket.GetBytes());
-            }
+            Console.WriteLine("processDisconectedClients");
 
-            _clients.Remove(client);
-            Console.WriteLine("Removed client.");
         }
     }
 
