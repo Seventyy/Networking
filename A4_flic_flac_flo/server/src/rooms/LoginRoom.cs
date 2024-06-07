@@ -9,7 +9,7 @@ namespace server
 	 * A connected client that never sends anything will be stuck in here for life,
 	 * unless the client disconnects (that will be detected in due time).
 	 */ 
-	class LoginRoom : SimpleRoom
+	class LoginRoom : Room
 	{
 		//arbitrary max amount just to demo the concept
 		private const int MAX_MEMBERS = 50;
@@ -17,6 +17,11 @@ namespace server
 		public LoginRoom(TCPGameServer pOwner) : base(pOwner)
 		{
 		}
+
+		public void AddMember(TcpMessageChannel pChannel)
+		{
+            addMember(pChannel);
+        }
 
 		protected override void addMember(TcpMessageChannel pMember)
 		{
@@ -50,13 +55,26 @@ namespace server
 		{
 			Log.LogInfo("Moving new client to accepted...", this);
 
+
 			PlayerJoinResponse playerJoinResponse = new PlayerJoinResponse();
+
+			foreach (string name in _server.GetLobbyRoom().PlayerNames.Values)
+			{
+				if (name == pMessage.name)
+				{
+					playerJoinResponse.result = PlayerJoinResponse.RequestResult.DENIED;
+					pSender.SendMessage(playerJoinResponse);
+
+					removeMember(pSender);
+					return;
+                }
+			}
+
 			playerJoinResponse.result = PlayerJoinResponse.RequestResult.ACCEPTED;
 			pSender.SendMessage(playerJoinResponse);
 
 			removeMember(pSender);
-			_server.GetLobbyRoom().AddMember(pSender);
-		}
-
+			_server.GetLobbyRoom().addMember(pSender, pMessage.name);
+        }
 	}
 }

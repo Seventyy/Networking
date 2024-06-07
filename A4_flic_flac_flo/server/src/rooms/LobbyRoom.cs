@@ -8,14 +8,28 @@ namespace server
 	 * In this room clients change their 'ready status'.
 	 * If enough people are ready, they are automatically moved to the GameRoom to play a Game (assuming a game is not already in play).
 	 */ 
-	class LobbyRoom : SimpleRoom
+	class LobbyRoom : Room
 	{
 		//this list keeps tracks of which players are ready to play a game, this is a subset of the people in this room
 		private List<TcpMessageChannel> _readyMembers = new List<TcpMessageChannel>();
 
+		private Dictionary<TcpMessageChannel, string> _playerNames = new Dictionary<TcpMessageChannel, string>();
+
+        public Dictionary<TcpMessageChannel, string> PlayerNames
+        {
+            get { return _playerNames; }
+        }
+
 		public LobbyRoom(TCPGameServer pOwner) : base(pOwner)
 		{
 		}
+
+		public void addMember(TcpMessageChannel pMember, string name)
+		{
+			_playerNames.Add(pMember, name);
+			addMember(pMember);
+		}
+
 
 		protected override void addMember(TcpMessageChannel pMember)
 		{
@@ -41,6 +55,8 @@ namespace server
 		 */
 		protected override void removeMember(TcpMessageChannel pMember)
 		{
+			_playerNames.Remove(pMember);
+
 			base.removeMember(pMember);
 			_readyMembers.Remove(pMember);
 
