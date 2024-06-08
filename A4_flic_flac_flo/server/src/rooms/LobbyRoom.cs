@@ -42,8 +42,9 @@ namespace server
 
 			//print some info in the lobby (can be made more applicable to the current member that joined)
 			ChatMessage simpleMessage = new ChatMessage();
-			simpleMessage.message = "Client 'John Doe' has joined the lobby!";
-			pMember.SendMessage(simpleMessage);
+			simpleMessage.message = PlayerNames[pMember] + " has joined the lobby!";
+
+			safeForEach((TcpMessageChannel member) => member.SendMessage(simpleMessage));
 
 			//send information to all clients that the lobby count has changed
 			sendLobbyUpdateCount();
@@ -66,6 +67,11 @@ namespace server
 		protected override void handleNetworkMessage(ASerializable pMessage, TcpMessageChannel pSender)
 		{
 			if (pMessage is ChangeReadyStatusRequest) handleReadyNotification(pMessage as ChangeReadyStatusRequest, pSender);
+			else if (pMessage is ChatMessage) handleChatMessage(pMessage as ChatMessage, pSender);
+			else
+			{
+
+			}
 		}
 
 		private void handleReadyNotification(ChangeReadyStatusRequest pReadyNotification, TcpMessageChannel pSender)
@@ -94,6 +100,12 @@ namespace server
 			//to all clients still in the lobby
 			sendLobbyUpdateCount();
 		}
+
+		private void handleChatMessage(ChatMessage pMessage, TcpMessageChannel pSender)
+		{
+			pMessage.message = PlayerNames[pSender] + ": " + pMessage.message;
+            safeForEach((TcpMessageChannel member) => member.SendMessage(pMessage));
+        }
 
 		private void sendLobbyUpdateCount()
 		{
