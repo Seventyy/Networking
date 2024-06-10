@@ -145,7 +145,18 @@ namespace server
             }
         }
 
+        public void PingAll()
+        {
+            foreach (TcpMessageChannel member in _members.Keys)
+            {
+                member.SendMessage(new Ping());
+            }
+        }
 
+        public void ForceRecheckClients()
+        {
+            removeFaultyMembers();
+        }
 
     }
 }

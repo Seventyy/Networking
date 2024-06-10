@@ -79,6 +79,7 @@ public class LobbyState : ApplicationStateWithView<LobbyView>
         if (pMessage is ChatMessage) handleChatMessage(pMessage as ChatMessage);
         else if (pMessage is RoomJoinedEvent) handleRoomJoinedEvent(pMessage as RoomJoinedEvent);
         else if (pMessage is LobbyInfoUpdate) handleLobbyInfoUpdate(pMessage as LobbyInfoUpdate);
+        //else if (pMessage is shared.Ping) fsm.channel.SendMessage(pMessage);
     }
 
     private void handleChatMessage(ChatMessage pMessage)

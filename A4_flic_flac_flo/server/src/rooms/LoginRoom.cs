@@ -81,6 +81,9 @@ namespace server
 
                 PlayerJoinResponse playerJoinResponse = new PlayerJoinResponse();
 
+                _server.GetLobbyRoom().PingAll();
+                _server.GetLobbyRoom().ForceRecheckClients();
+
                 foreach (PlayerInfo playerInfo in _server.GetLobbyRoom().Members.Values)
                 {
                     if (playerInfo.playerName == pMessage.name)
