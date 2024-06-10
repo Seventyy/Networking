@@ -66,7 +66,6 @@ public class GameState : ApplicationStateWithView<GameView>
 
     private void handleGameStartEvent(GameStartEvent pGameStartEvent)
     {
-        view.gameBoard.SetBoardData(new TicTacToeBoardData());
 
         if (pGameStartEvent.playerId == 1)
         {
@@ -104,6 +103,7 @@ public class GameState : ApplicationStateWithView<GameView>
         {
             fsm.ChangeState<LobbyState>();
         }
+        view.gameBoard.SetBoardData(new TicTacToeBoardData());
     }
 
 }
