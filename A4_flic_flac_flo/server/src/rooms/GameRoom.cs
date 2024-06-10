@@ -16,8 +16,6 @@ namespace server
              */
     class GameRoom : Room
     {
-        public bool IsGameInPlay { get; private set; }
-
         //wraps the board to play on...
         private TicTacToeBoard _board;
 
@@ -28,9 +26,6 @@ namespace server
 
         public void StartGame(KeyValuePair<TcpMessageChannel, PlayerInfo> pPlayer1, KeyValuePair<TcpMessageChannel, PlayerInfo> pPlayer2)
         {
-            if (IsGameInPlay) throw new Exception("Programmer error duuuude.");
-
-            IsGameInPlay = true;
             addMember(pPlayer1.Key, pPlayer1.Value);
             addMember(pPlayer2.Key, pPlayer2.Value);
 
@@ -111,37 +106,45 @@ namespace server
                 makeMoveResult.boardData = _board.GetBoardData();
                 sendToAll(makeMoveResult);
 
-                int winner = _board.GetBoardData().WhoHasWon();
-
-                if (winner != 0)
-                {
-                    GameEndEvent gameEndEvent = new GameEndEvent();
-                    gameEndEvent.whoWon = winner;
-                    sendToAll(gameEndEvent);
-
-                    IsGameInPlay = false;
-
-                    KeyValuePair<TcpMessageChannel, PlayerInfo> player1 =
-                        new KeyValuePair<TcpMessageChannel, PlayerInfo>(Members.Keys.ElementAt(0), Members[Members.Keys.ElementAt(0)]);
-                    KeyValuePair<TcpMessageChannel, PlayerInfo> player2 =
-                        new KeyValuePair<TcpMessageChannel, PlayerInfo>(Members.Keys.ElementAt(1), Members[Members.Keys.ElementAt(1)]);
-
-                    removeMember(player1.Key);
-                    removeMember(player2.Key);
-
-                    _server.GetLobbyRoom().AddMember(player1.Key, player1.Value);
-                    _server.GetLobbyRoom().AddMember(player2.Key, player2.Value);
-
-                    _server.GetLobbyRoom().AnnounceWonGame(winner == 1 ? player1.Value.playerName : player2.Value.playerName);
-
-                    _server.RemoveGameRoom(this);
-
-                    Log.LogInfo("Game ended, players moved back to lobby", this);
-                }
+                CheckIfGameIsOver();
             }
             catch (Exception ex)
             {
                 Console.WriteLine("An error occurred while handling MakeMoveRequest: " + ex.Message, this);
+            }
+        }
+
+        private void CheckIfGameIsOver()
+        {
+            try
+            {
+                int winner = _board.GetBoardData().WhoHasWon();
+                if (winner == 0) return;
+
+                GameEndEvent gameEndEvent = new GameEndEvent();
+                gameEndEvent.whoWon = winner;
+                sendToAll(gameEndEvent);
+
+                KeyValuePair<TcpMessageChannel, PlayerInfo> player1 =
+                    new KeyValuePair<TcpMessageChannel, PlayerInfo>(Members.Keys.ElementAt(0), Members[Members.Keys.ElementAt(0)]);
+                KeyValuePair<TcpMessageChannel, PlayerInfo> player2 =
+                    new KeyValuePair<TcpMessageChannel, PlayerInfo>(Members.Keys.ElementAt(1), Members[Members.Keys.ElementAt(1)]);
+
+                removeMember(player1.Key);
+                removeMember(player2.Key);
+
+                _server.GetLobbyRoom().AddMember(player1.Key, player1.Value);
+                _server.GetLobbyRoom().AddMember(player2.Key, player2.Value);
+
+                _server.GetLobbyRoom().AnnounceWonGame(winner == 1 ? player1.Value.playerName : player2.Value.playerName);
+
+                _server.RemoveGameRoom(this);
+
+                Log.LogInfo("Game ended, players moved back to lobby", this);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("An error occurred while checking if the game is over: " + ex.Message, this);
             }
         }
     }

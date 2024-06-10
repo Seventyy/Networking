@@ -103,10 +103,6 @@ namespace server
             {
                 if (pMessage is ChangeReadyStatusRequest) handleReadyNotification(pMessage as ChangeReadyStatusRequest, pSender);
                 else if (pMessage is ChatMessage) handleChatMessage(pMessage as ChatMessage, pSender);
-                else
-                {
-
-                }
             }
             catch (Exception ex)
             {
@@ -155,7 +151,6 @@ namespace server
             try
             {
                 pMessage.message = Members[pSender].playerName + ": " + pMessage.message;
-                //safeForEach((TcpMessageChannel member) => member.SendMessage(pMessage));
                 sendToAll(pMessage);
             }
             catch (Exception ex)
